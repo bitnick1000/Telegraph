@@ -1,0 +1,129 @@
+
+
+#include <winsock2.h>
+#include <Windows.h>
+
+#include <stdio.h>
+#pragma comment(lib, "WS2_32")
+
+#if (defined _WIN32 && defined _DEBUG)
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+	SOCKET m_socket;
+	LONGLONG m_timeStart;
+
+	char m_buffer[1024];
+
+	void Init(BYTE minorVer , BYTE majorVer )
+	{
+		WORD sockVersion;
+		WSADATA wsaData;
+		SOCKADDR_IN servAddr;
+
+		sockVersion = MAKEWORD(minorVer, majorVer);
+		if(WSAStartup(sockVersion, &wsaData) != 0)
+		{
+			exit(0);
+		}
+		m_socket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+		if(m_socket == INVALID_SOCKET)
+		{
+			printf(" Failed socket() \n");
+			return ;
+		}
+		servAddr.sin_family = AF_INET;
+		servAddr.sin_port = htons(11000);
+		servAddr.sin_addr.S_un.S_addr = inet_addr("127.0.0.1");
+		if(connect(m_socket, (SOCKADDR_IN*)&servAddr, sizeof(servAddr)) == -1)
+		{
+			printf(" Failed connect() \n");
+			return ;
+		}
+	}
+
+	void Start()
+	{
+		LARGE_INTEGER li;
+		QueryPerformanceCounter(&li);
+		m_timeStart = li.QuadPart;
+	}
+	void Restart()
+	{
+		LARGE_INTEGER li;
+		QueryPerformanceCounter(&li);
+		m_timeStart = li.QuadPart;
+	}
+	LONGLONG Stop()
+	{
+		LARGE_INTEGER li;
+		QueryPerformanceCounter(&li);
+		return li.QuadPart - m_timeStart;
+	}
+	int SendString(const char* sz)
+	{
+		return send(m_socket, sz, strlen(sz), NULL);
+	}
+	int SendBuffer(const char *buf, int len)
+	{
+		return send(m_socket, buf, len, NULL);
+	}
+	int SendLongLong(LONGLONG i)
+	{
+		int high,low;
+		char highbuf[11];
+		char lowbuf[11];
+		char sendbuf[22];
+
+		memset(sendbuf,0,12);
+
+		high=*(int*)&i;
+		low=*((int*)&i+1);
+		itoa(high,highbuf,10);
+		itoa(low,lowbuf,10);
+		strcat(sendbuf,highbuf);
+		strcat(sendbuf,lowbuf);
+		return send(m_socket, sendbuf,strlen(sendbuf), NULL);
+	}
+	void Done()
+	{
+		WSACleanup();
+	}
+
+
+#define DEBUG_REMOTE_INIT()    \
+	Init(2,2);
+
+#define DEBUG_REMOTE_DONE()    \
+	Done();
+
+#define DEBUG_REMOTE_PRINTF0(format)    \
+	sprintf(m_buffer,format);    \
+	SendString(m_buffer);
+
+#define DEBUG_REMOTE_PRINTF1(format,arg1)    \
+	sprintf(m_buffer,format,arg1);    \
+	SendString(m_buffer);
+
+#define DEBUG_REMOTE_PRINTF2(format,arg1,arg2)    \
+	sprintf(m_buffer,format,arg1,arg2);    \
+	SendString(m_buffer);
+
+#define DEBUG_REMOTE_PRINTF3(format,arg1,arg2,arg3)    \
+	sprintf(m_buffer,format,arg1,arg2,arg3);    \
+	SendString(m_buffer);
+
+#define DEBUG_REMOTE_STOPWATCH_START(name)    \
+	SendBuffer(name,strlen(name));    \
+	Start();    
+
+#define DEBUG_REMOTE_STOPWATCH_STOP()    \
+	SendLongLong(Stop());    
+#endif
+
+
+#ifdef __cplusplus
+}
+#endif

@@ -1,0 +1,237 @@
+#include <winsock2.h>
+#include <Windows.h>
+
+#include <stdio.h>
+#pragma comment(lib, "WS2_32")
+
+
+#if (defined _WIN32 && defined _DEBUG)
+//#ifdef __cplusplus
+//#define EXTERN_C extern "C" {
+//#define EXTERN_C_END  }
+//#endif
+//
+//EXTERN_C
+#define _CRT_SECURE_NO_WARNINGS
+
+#define BC_SOCKET_TEXT									0
+#define BC_SOCKET_DRAW								1
+
+#define BC_SOCKET_COUNT								2
+
+#define BC_TEXT_BUFFER_SIZE							1000
+#define BC_DRAW_BUFFER_SIZE						1000
+
+int bc_countPoint=0;
+char* bc_pBuffer[BC_SOCKET_COUNT];
+SOCKET bc_socket[BC_SOCKET_COUNT];
+
+LONGLONG bc_timeStart;
+BOOL bc_bWSAActivate = FALSE;
+
+void BC_WSAStartup(BYTE minorVer , BYTE majorVer)
+{
+	if(!bc_bWSAActivate)
+	{
+		WSADATA wsaData;
+		if(WSAStartup(MAKEWORD(minorVer, majorVer), &wsaData) != 0)
+		{
+			exit(0);
+		}
+		bc_bWSAActivate = TRUE;
+	}
+}
+void BC_WSADone()
+{
+	WSACleanup();
+	bc_bWSAActivate = FALSE;
+}
+
+void BC_TextInit( )
+{
+	SOCKADDR_IN servAddr;
+
+	bc_pBuffer[BC_SOCKET_TEXT] = (char*)malloc(BC_TEXT_BUFFER_SIZE);
+	bc_socket[BC_SOCKET_TEXT] = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+	if(bc_socket[BC_SOCKET_TEXT] == INVALID_SOCKET)
+	{
+		printf(" Failed socket() \n");
+		return ;
+	}
+	servAddr.sin_family = AF_INET;
+	servAddr.sin_port = htons(11000);
+	servAddr.sin_addr.S_un.S_addr = inet_addr("127.0.0.1");
+	if(connect(bc_socket[BC_SOCKET_TEXT], (PSOCKADDR)&servAddr, sizeof(servAddr)) == -1)
+	{
+		printf(" Failed connect() \n");
+		return ;
+	}
+}
+void BC_TextDone()
+{
+	free( bc_pBuffer[BC_SOCKET_TEXT]);
+	bc_pBuffer[BC_SOCKET_TEXT] = NULL;
+	closesocket(bc_socket[BC_SOCKET_TEXT] );
+	BC_WSADone();
+}
+
+void BC_DrawInit()
+{
+	SOCKADDR_IN server;
+	int iResult;
+	BOOL bNodely=1;
+	bc_pBuffer[BC_SOCKET_DRAW]=(char*)malloc(BC_DRAW_BUFFER_SIZE);
+	bc_socket[BC_SOCKET_DRAW] = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+	iResult= setsockopt(
+		bc_socket[BC_SOCKET_DRAW],
+		IPPROTO_TCP,
+		TCP_NODELAY,
+		(char*)&bNodely,
+		sizeof(bNodely)
+		);
+	if(iResult!=NO_ERROR)
+	{
+		printf("failed setsockopt!\n");
+		system("pause");
+		return ;
+	}
+	if(bc_socket[  BC_SOCKET_DRAW] == INVALID_SOCKET)
+	{
+		printf("failed socket!\n");
+		return ;
+	}
+	server.sin_family = AF_INET;
+	server.sin_port = htons(11001);
+	server.sin_addr.S_un.S_addr = inet_addr("127.0.0.1");
+	iResult=connect(bc_socket[BC_SOCKET_DRAW], (PSOCKADDR)&server, sizeof(server));
+	if(iResult==SOCKET_ERROR)
+	{
+		printf("Failed connect!\n");
+		iResult=WSAGetLastError();
+		if(iResult ==  WSAECONNREFUSED)
+			printf("WSAECONNREFUSED\n");
+		system("pause");
+		return ;
+	}
+}
+void BC_DrawDone()
+{
+	free(bc_pBuffer[BC_SOCKET_DRAW]);
+	closesocket(bc_socket[BC_SOCKET_DRAW] );
+	BC_WSADone();
+}
+void BC_DrawAdd(double x,double y,int color)
+{
+	int len=sizeof(double)+sizeof(double)+sizeof(int);
+	char* buf=bc_pBuffer[BC_SOCKET_DRAW]+bc_countPoint*len;
+	*(double*)buf=x;
+	*((double*)buf+1)=y;
+	*(int*)((double*)buf+2)=color;
+	bc_countPoint++;
+	if(bc_countPoint==BC_DRAW_BUFFER_SIZE/len)
+	{
+		send(bc_socket[BC_SOCKET_DRAW],bc_pBuffer[BC_SOCKET_DRAW],BC_DRAW_BUFFER_SIZE,NULL);
+		bc_countPoint=0;
+	}
+}
+void BC_DrawAddOver()
+{
+	int len=sizeof(double)+sizeof(double)+sizeof(int);
+	char* cmd="InvokeDraw";
+	if(bc_countPoint!=0)
+	{
+		send(bc_socket[BC_SOCKET_DRAW],bc_pBuffer[BC_SOCKET_DRAW], bc_countPoint * len  ,NULL);
+		bc_countPoint=0;
+	}
+	send(bc_socket[BC_SOCKET_DRAW],cmd, strlen(cmd)  ,NULL);
+}
+void BC_DrawClear()
+{
+	char* cmd="InvokeClear";
+	send(bc_socket[BC_SOCKET_DRAW],cmd,strlen(cmd),NULL);
+}
+
+void BC_StopwatchStart()
+{
+	LARGE_INTEGER li;
+	QueryPerformanceCounter(&li);
+	bc_timeStart = li.QuadPart;
+}
+void BC_StopwatchRestart()
+{
+	LARGE_INTEGER li;
+	QueryPerformanceCounter(&li);
+	bc_timeStart = li.QuadPart;
+}
+LONGLONG BC_StopwatchStop()
+{
+	LARGE_INTEGER li;
+	QueryPerformanceCounter(&li);
+	return li.QuadPart - bc_timeStart;
+}
+
+int BC_SendString(const char* sz)
+{
+	int iResult;
+	iResult = send(bc_socket[BC_SOCKET_TEXT], sz, strlen(sz), NULL);
+	if(SOCKET_ERROR == iResult)
+	{
+		printf("send error\n");
+		getchar();
+	}
+	return 0;
+}
+int BC_SendBuffer(const char *buf, int len)
+{
+	return send(bc_socket[BC_SOCKET_TEXT], buf, len, NULL);
+}
+
+
+#define DEBUG_REMOTE_INIT()    \
+	BC_WSAStartup(2,2);    \
+	BC_TextInit();
+
+#define DEBUG_REMOTE_DONE()    \
+	BC_TextDone();
+
+#define DEBUG_REMOTE_PRINTF0(format)    \
+	sprintf(bc_pBuffer[BC_SOCKET_TEXT],format);    \
+	BC_SendString(bc_pBuffer[BC_SOCKET_TEXT]);
+
+#define DEBUG_REMOTE_PRINTF1(format,arg1)    \
+	sprintf(bc_pBuffer[BC_SOCKET_TEXT],format,arg1);    \
+	BC_SendString(bc_pBuffer[BC_SOCKET_TEXT]);
+
+#define DEBUG_REMOTE_PRINTF2(format,arg1,arg2)    \
+	sprintf(bc_pBuffer[BC_SOCKET_TEXT],format,arg1,arg2);    \
+	BC_SendString(bc_pBuffer[BC_SOCKET_TEXT]);
+
+#define DEBUG_REMOTE_PRINTF3(format,arg1,arg2,arg3)    \
+	sprintf(bc_pBuffer[BC_SOCKET_TEXT],format,arg1,arg2,arg3);    \
+	BC_SendString(bc_pBuffer[BC_SOCKET_TEXT]);
+
+#define DEBUG_REMOTE_STOPWATCH_START()    \
+	BC_StopwatchStart();
+
+#define DEBUG_REMOTE_STOPWATCH_STOP(format)    \
+	sprintf(bc_pBuffer[BC_SOCKET_TEXT],format,BC_StopwatchStop());    \
+	BC_SendString(bc_pBuffer[BC_SOCKET_TEXT]);
+
+#define DEBUG_REMOTE_DRAW_INIT()    \
+	BC_WSAStartup(2,2);    \
+	BC_DrawInit();
+
+#define DEBUG_REMOTE_DRAW_DONE()    \
+	BC_DrawDone();
+
+#define DEBUG_REMOTE_DRAW_ADD(x,y,color)    \
+	BC_DrawAdd(x,y,color);    \
+
+#define DEBUG_REMOTE_DRAW_CLEAR()    \
+	BC_DrawClear();    \
+
+#define DEBUG_REMOTE_DRAW_ADDOVER()    \
+	BC_DrawAddOver();
+
+//EXTERN_C_END
+#endif //(defined _WIN32 && defined _DEBUG)

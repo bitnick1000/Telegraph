@@ -1,0 +1,15 @@
+#include "Fibonacci.h"
+
+int Fibonacci(int n)
+{
+	if(n == 1 || n == 2)
+        return 1;
+	int i;
+	int prev=1;
+	int prevprev=1;
+	int iResult=0;
+	for(i=0;i<n;i++)
+	{
+
+	}
+}

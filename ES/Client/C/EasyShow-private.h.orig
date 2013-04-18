@@ -1,0 +1,34 @@
+#include "EasyShow.h"
+
+#define ES_SEND_BUFFER_SIZE									2048
+typedef enum
+{
+    ES_TEXT_NORMAL,
+    ES_DRAW_CLEAR,
+    ES_DRAW_ADD,
+    ES_DRAW_DISPLAY,
+} ES_MARK;
+
+typedef struct
+{
+    UINT32 size;
+    UINT32 mark;
+} SEND_STRUCT;
+typedef struct
+{
+    SOCKET socket;
+    char* buf;
+    struct{
+        char* pText;
+    } Text;
+    struct
+    {
+        LONGLONG timeStart;
+    } Stopwatch;
+}*ES_HANDLE;
+typedef struct
+{
+    LONGLONG timeStart;
+    void(*Start)();
+    LONGLONG(*End)();
+} Stopwatch;

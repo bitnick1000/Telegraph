@@ -11,7 +11,13 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="Fibonacci.c" />
     <ClCompile Include="main.c" />
+    <ClCompile Include="StopwatchTestCase.c" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Fibonacci.h" />
+    <ClInclude Include="StopWatchTestCase.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{18065D14-6E30-4082-ACBA-3F1C835454A9}</ProjectGuid>
@@ -51,8 +57,8 @@
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>
-      </AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(SolutionDir)$(Configuration)\</AdditionalLibraryDirectories>
+      <SubSystem>Console</SubSystem>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">

@@ -1,20 +1,7 @@
-
+#include "Fibonacci.h"
+#include "StopWatchTestCase.h"
 #include <Telegraph.h>
 #include <math.h>
-int Fibonacci(int n)
-{
-    int i;
-    int prev = 1;
-    int prevprev = 1;
-    int temp;
-    for(i = 2; i < n; i++)
-    {
-		temp=prev;
-		prev=prev+prevprev;
-		prevprev=temp;
-    }
-	return prev;
-}
 void TestPrint()
 {
 	int i;
@@ -26,19 +13,6 @@ void TestPrint()
 		TELE_DEBUG_PRINTF1("%d ",Fibonacci(i));
 	}
 	TELE_DEBUG_PRINTF0("\n");
-	TELE_DEBUG_DONE();
-}
-void TestStopwatch()
-{
-	int i;
-	double d=0.0;
-	TELE_DEBUG_INIT();
-	TELE_DEBUG_STOPWATCH_START();
-	for(i=0;i<10000;i++)
-	{
-		d+=Fibonacci(i);
-	}
-	TELE_DEBUG_STOPWATCH_STOP("10,000 times = %lld\n");
 	TELE_DEBUG_DONE();
 }
 void TestDraw()
@@ -71,7 +45,6 @@ void TestDraw()
 int main()
 {
 	TestPrint();
-	TestStopwatch();
 	TestDraw();
 	return 0;
 }

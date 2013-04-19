@@ -106,6 +106,7 @@ namespace Wpf
                 }
             }
             richTextBox.InvokeAppendLine("Tcp Client Close At " + DateTime.Now.ToString("HH:mm:ss"));
+            richTextBox.InvokeAppendLine("");
             richTextBox.InvokeScrollToEnd();
         }
         void Analysis(byte[] data, int readLength)
